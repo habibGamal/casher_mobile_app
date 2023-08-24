@@ -1,51 +1,39 @@
+import 'package:casher_mobile_app/routing_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:casher_mobile_app/helpers/preferences.dart';
-import 'package:casher_mobile_app/tools/connect_to_system/connect_to_system.dart';
-import 'package:casher_mobile_app/utils/loading_dialog.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 
-class DropdownSelectHost extends StatefulWidget {
+class DropdownSelectHost extends HookWidget {
   const DropdownSelectHost({super.key});
-
-  @override
-  State<DropdownSelectHost> createState() => _DropdownSelectHostState();
-}
-
-class _DropdownSelectHostState extends State<DropdownSelectHost> {
-  String? _currentSystemLink;
-  final List<String> _systemLinks = [];
-  _loadSystemLinks() async {
+  _loadHosts(ValueNotifier<List<String>> hosts) async {
     final prefs = await getPreferences();
-    final systemLinks = prefs.getStringList(PreferencesKeys.hosts) ?? [];
-    _systemLinks.addAll(systemLinks);
-    setState(() {});
+    final storedHosts = prefs.getStringList(PreferencesKeys.hosts) ?? [];
+    hosts.value = storedHosts;
   }
 
-  _loadCurrentLinkedSystem() async {
+  _loadCurrentLinkedSystem(ValueNotifier<String?> currentHost) async {
     final prefs = await getPreferences();
     final url = prefs.getString(PreferencesKeys.currentSelectedHost);
-    _currentSystemLink = url;
-    setState(() {});
-  }
-
-  @override
-  void initState() {
-    _loadSystemLinks();
-    _loadCurrentLinkedSystem();
-    super.initState();
+    currentHost.value = url;
   }
 
   @override
   Widget build(BuildContext context) {
-    final loadingDialog = LoadingDialog(context);
+    final hosts = useState<List<String>>([]);
+    final currentHost = useState<String?>(null);
+    useEffect(() {
+      _loadHosts(hosts);
+      _loadCurrentLinkedSystem(currentHost);
+      return null;
+    }, []);
     return ListTile(
       title: DropdownButtonFormField<String>(
-        value: _currentSystemLink,
+        value: currentHost.value,
         onChanged: (String? newValue) async {
-          _currentSystemLink = newValue!;
-          setState(() {});
-          loadingDialog.startLoading();
-          await ConnectToSystem.instance
-              .connect(context, host: newValue, loading: loadingDialog);
+          currentHost.value = newValue!;
+          final prefs = await getPreferences();
+          prefs.setString(PreferencesKeys.currentSelectedHost, newValue);
+          Navigator.pushReplacementNamed(context, LANDING_LOADING);
         },
         hint: const Text('Choose a system'),
         decoration: InputDecoration(
@@ -53,7 +41,7 @@ class _DropdownSelectHostState extends State<DropdownSelectHost> {
             borderRadius: BorderRadius.circular(10.0),
           ),
         ),
-        items: _systemLinks.map<DropdownMenuItem<String>>((String value) {
+        items: hosts.value.map<DropdownMenuItem<String>>((String value) {
           return DropdownMenuItem<String>(
             value: value,
             child: Text(value),

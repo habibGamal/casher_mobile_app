@@ -15,7 +15,7 @@ class ConnectToSystem {
     final prefs = await getPreferences();
     final previeusHost = prefs.getString(PreferencesKeys.currentSelectedHost);
     _currentSelectedHost = previeusHost;
-    previeusHost ?? ApiRequests.setHost(previeusHost!);
+    if (previeusHost != null) ApiRequests.setHost(previeusHost);
   }
 
   Future<void> _updateCurrentHost(String host) async {
@@ -26,14 +26,17 @@ class ConnectToSystem {
   }
 
   Future<void> _determineHost(String? host) async {
-    host == null ? _loadPreviousHost() : _updateCurrentHost(host);
+    host == null ? await _loadPreviousHost() : await _updateCurrentHost(host);
   }
 
   Future<void> connect(BuildContext context,
       {String? host, LoadingDialog? loading}) async {
     final actions = _ConnectionActions(context);
     await _determineHost(host);
-    if (currentSelectedHost == null) actions.noSystemChosen();
+    if (currentSelectedHost == null) {
+      actions.noSystemChosen();
+      return;
+    }
     // ignore: use_build_context_synchronously
     final statusCode = await ApiRequests.of(context).testAuthentication();
     loading?.endLoading();
