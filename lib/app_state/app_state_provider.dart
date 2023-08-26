@@ -5,6 +5,16 @@ import 'package:provider/provider.dart';
 
 enum AuthState { guest, authorized }
 
+final policy = Policies(
+  cacheReread: CacheRereadPolicy.ignoreAll,
+  fetch: FetchPolicy.noCache,
+);
+final policies = DefaultPolicies(
+  query: policy,
+  mutate: policy,
+  watchQuery: policy,
+);
+
 AppStateProvider appStateProvider(context) =>
     Provider.of<AppStateProvider>(context, listen: false);
 
@@ -24,6 +34,7 @@ class AppStateProvider extends ChangeNotifier {
         'https://0.0.0.0/graphql',
       ),
       cache: GraphQLCache(),
+      defaultPolicies: policies,
     ),
   );
 
@@ -31,33 +42,37 @@ class AppStateProvider extends ChangeNotifier {
 
   ValueNotifier<GraphQLClient> get client => _client;
 
-  void updateHost(String host) {
+  Future<void> updateHost(String host) async {
     _httpLink = HttpLink(
       'https://$host/graphql',
     );
-    final AuthLink authLink = AuthLink(getToken: () async {
-      return 'Bearer ${await SecureStorage.instance.getAuthToken()}';
+    final token = await SecureStorage.instance.getAuthToken();
+    final AuthLink authLink = AuthLink(getToken: () {
+      return 'Bearer $token';
     });
     final Link link = authLink.concat(_httpLink!);
     _client = ValueNotifier(
       GraphQLClient(
         link: link,
         cache: GraphQLCache(),
+        defaultPolicies: policies,
       ),
     );
     notifyListeners();
   }
 
-  void refreshAuthToken() {
+  Future<void> refreshAuthToken() async {
     if (_httpLink == null) return;
-    final AuthLink authLink = AuthLink(getToken: () async {
-      return 'Bearer ${await SecureStorage.instance.getAuthToken()}';
+    final token = await SecureStorage.instance.getAuthToken();
+    final AuthLink authLink = AuthLink(getToken: () {
+      return 'Bearer $token';
     });
     final Link link = authLink.concat(_httpLink!);
     _client = ValueNotifier(
       GraphQLClient(
         link: link,
         cache: GraphQLCache(),
+        defaultPolicies: policies,
       ),
     );
     notifyListeners();

@@ -1,60 +1,54 @@
 import 'package:casher_mobile_app/app_state/app_state_provider.dart';
+import 'package:casher_mobile_app/graphql/queries.dart';
 import 'package:casher_mobile_app/helpers/preferences.dart';
 import 'package:casher_mobile_app/routing_constants.dart';
+import 'package:casher_mobile_app/services/query_resolver.dart';
 import 'package:casher_mobile_app/widgets/unique/guest_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:graphql_flutter/graphql_flutter.dart';
 
-class LandingLoadingPage extends HookWidget {
-  const LandingLoadingPage({Key? key}) : super(key: key);
-  _loadCurrentHost(ValueNotifier<bool> loading) async {
-    final context = useContext();
-    final appStateProviderInstance = appStateProvider(context);
-    final prefs = await getPreferences();
-    final url = prefs.getString(PreferencesKeys.currentSelectedHost);
-    if (url != null) appStateProviderInstance.updateHost(url);
-    loading.value = false;
-  }
+class _LoadingPageQueryResolver extends QueryResolver {
+  _LoadingPageQueryResolver(QueryResult<Object?> result) : super(result);
 
-  Widget resolveQuery(result, ValueNotifier<bool> loading) {
-    // loading while getting the host from the shared preferences
-    if (loading.value) return const Center(child: CircularProgressIndicator());
-    if (result.hasException) return const Text("Losing connection to the host");
-    if (result.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    String? data = result.data?['testConnection'];
-
-    if (data == null) {
-      return const Center(child: Text('Something went wrong'));
-    }
-    // Navigator.of(context).pushReplacementNamed(GUEST_HOME);
-    return Center(
-      child: Text(data),
+  @override
+  Widget onFinish<String>(data) {
+    return const Center(
+      child: Text('You will be redirected now'),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final loadingHost = useState(true);
+  String? dataFormat<String>() {
+    return result.data?['testConnection'] as String?;
+  }
+}
 
+class LandingLoadingPage extends HookWidget {
+  const LandingLoadingPage({Key? key}) : super(key: key);
+  _loadCurrentHost() async {
+    final context = useContext();
+    final appStateProviderInstance = appStateProvider(context);
+    final prefs = await getPreferences();
+    final url = prefs.getString(PreferencesKeys.currentSelectedHost);
+    if (url != null) await appStateProviderInstance.updateHost(url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final query = useQuery(QueryOptions(
-      document: gql(q),
+      document: gql(Queries.testConnection),
     ));
 
     useEffect(() {
-      _loadCurrentHost(loadingHost);
+      _loadCurrentHost();
       return null;
     }, []);
 
     useEffect(() {
-      if (query.result.data?['testConnection'] == "Connected to GraphQL") {
+      if (query.result.data != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(context).pushReplacementNamed(AUTH_HOME);
+          Navigator.pushReplacementNamed(context, AUTH_HOME);
         });
       }
       return null;
@@ -65,13 +59,7 @@ class LandingLoadingPage extends HookWidget {
         title: const Text('Cashier App'),
       ),
       drawer: const GuestDrawer(),
-      body: resolveQuery(query.result, loadingHost),
+      body: _LoadingPageQueryResolver(query.result).resolve(),
     );
   }
 }
-
-const q = """
-  query{
-    testConnection
-  }
-""";

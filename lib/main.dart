@@ -1,8 +1,8 @@
 import 'package:casher_mobile_app/app_state/app_state_provider.dart';
 import 'package:casher_mobile_app/pages/auth_pages/home_page.dart';
+import 'package:casher_mobile_app/pages/auth_pages/stocks_page.dart';
 import 'package:casher_mobile_app/pages/guest_home_page.dart';
 import 'package:casher_mobile_app/pages/landing_loading_page.dart';
-import 'package:casher_mobile_app/pages/link_new_system_page.dart';
 import 'package:casher_mobile_app/pages/login_page.dart';
 import 'package:casher_mobile_app/routing_constants.dart';
 import 'package:flutter/material.dart';
@@ -32,10 +32,10 @@ class MyApp extends StatelessWidget {
           LANDING_LOADING: (context) => const LandingLoadingPage(),
           GUEST_HOME: (context) => const GuestHomePage(),
           // BARCODE_SCANNER: (context) => const BarcodeScannerPage(),
-          LINK_NEW_SYSTEM: (context) => const LinkNewSystemPage(),
-          LOGIN: (context) => const LoginPage(),
+          // LINK_NEW_SYSTEM: (context) => const LinkNewSystemPage(),
+          LOGIN: (context) => LoginPage(),
           AUTH_HOME: (context) => const AuthHomePage(),
-          // AUTH_STOCKS: (context) => const StocksPage(),
+          STOCKS: (context) => const StocksPage(),
         },
         initialRoute: LANDING_LOADING,
       ),
